@@ -3,6 +3,7 @@ import * as dotenv from "dotenv";
 import { Data } from "./types/Data";
 import { Message } from "discord.js";
 import { textsToEmbedding } from "./api/textToEmbedding";
+import formatEmbedding from "./utils/formatEmbedding";
 dotenv.config();
 
 const pgHost = process.env.POSTGRES_HOST
@@ -22,6 +23,59 @@ const pool = new Pool({
     password: pgPassword,
     port: Number(pgPort)
 })
+
+export async function getSimilarMessages(query: string, userId: string): Promise<Data[] | void> {
+    const embedding = await textsToEmbedding([query])
+    if (!embedding) {
+        console.error("Failed to get embeddings from API. Skipping batch")
+        return
+    }
+
+    const client = await pool.connect()
+    try {
+        const vectorString = await formatEmbedding(embedding[0])
+        
+        const semanticResult = await client.query(
+            `SELECT * FROM messages
+            ORDER BY embedding <=> $1
+            LIMIT 10`,
+            [vectorString]
+        )
+
+        return semanticResult.rows.map(row => {
+            const { context_messages, ...message } = row
+            return {
+                ...message,
+                context: context_messages || []
+            }
+        })
+    } catch (error) {
+        console.error('Error getting similar messages:', error)
+        return
+    } finally {
+        client.release()
+    }
+}
+
+export async function getUserMessagesHistory(userId: string, limit: number = 100): Promise<Data[] | void> {
+    const client = await pool.connect()
+    try {
+        const result = await client.query(
+            `SELECT DISTINCT ON (content) *
+            FROM messages
+            WHERE user_id = $1
+            ORDER BY content, timestamp DESC
+            LIMIT $2`,
+            [userId, limit]
+        )
+        return result.rows
+    } catch (error) {
+        console.error('Error getting user messages history:', error)
+        return
+    } finally {
+        client.release()
+    }
+}
 
 export async function storeAndProcessBatch(messagesBatch: Message[]): Promise<number | void> {
     const valid = await validateBatch(messagesBatch)
@@ -106,7 +160,7 @@ async function storeBatch(batch: Data[]): Promise<number | null> {
             const { discord_message_id, user_id, channel_id, content, timestamp, user_name, attachment_urls, embedding } = row
 
             // Convert the embedding array to the format pgvector expects
-            const vectorString = `[${embedding.join(',')}]`
+            const vectorString = await formatEmbedding(embedding)
 
             const values = [
                 discord_message_id,
