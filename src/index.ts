@@ -80,8 +80,16 @@ client.on("messageCreate", async (message) => {
     if (!message.guild || !message.channel || !message.content || !message.author) return
     if (message.author.bot) return
 
+    if (message.guild.id !== SERVER_ID) {
+        message.reply({
+            content: "I can only be used inside Teyvat.",
+            allowedMentions: { repliedUser: false }
+        })
+        return
+    }
+
     if (message.content === "!help") {
-        if (message.author.username !== "Monakecil") {
+        if (message.author.username !== "monakecil") {
             message.reply({
                 content: `
                 !roastme-a - Get roasted based on your chat history.
@@ -297,9 +305,9 @@ client.on("messageCreate", async (message) => {
     }
 
     if (message.content === "!history") {
-        if (message.author.username !== "Monakecil") {
+        if (message.author.username !== "monakecil") {
             message.reply({
-                content: "Monakecil is the only master I serve.",
+                content: "monakecil is the only master I serve.",
                 allowedMentions: { repliedUser: false }
             })
             return
@@ -346,8 +354,8 @@ client.on("messageCreate", async (message) => {
 
     if (message.content.startsWith("!similar")) {
 
-        if (message.author.username !== "Monakecil") {
-            message.reply({ content: "Monakecil is the only master I serve.", allowedMentions: { repliedUser: false } })
+        if (message.author.username !== "monakecil") {
+            message.reply({ content: "monakecil is the only master I serve.", allowedMentions: { repliedUser: false } })
             return
         }
 
