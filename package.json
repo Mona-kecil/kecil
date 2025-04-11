@@ -1,14 +1,20 @@
 {
-  "name": "Meng",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "meng",
+  "version": "1.0.1",
+  "description": "a chatty discord bot with LLM integration.",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon"
+    "dev": "npx nodemon -w 'src/**/*' -e 'ts' -x 'npx tsc && node dist/index.js DEV'",
+    "prod": "node"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "discord bot",
+    "llm",
+    "cat",
+    "meng"
+  ],
+  "author": "Mona-kecil",
   "license": "ISC",
   "packageManager": "pnpm@10.7.0",
   "dependencies": {
@@ -21,7 +27,6 @@
   "devDependencies": {
     "@types/node": "^22.13.14",
     "@types/pg": "^8.11.11",
-    "concurrently": "^9.1.2",
     "nodemon": "^3.1.9",
     "typescript": "^5.8.2"
   }
