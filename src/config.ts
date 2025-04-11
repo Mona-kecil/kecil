@@ -1,3 +1,4 @@
+import { GoogleGenAI } from "@google/genai";
 import * as dotenv from "dotenv";
 dotenv.config()
 
@@ -23,10 +24,12 @@ if (!TOKEN) {
     throw new Error("Discord bot token not found in environment variables.");
 }
 
+const AI = new GoogleGenAI({ apiKey: GEMINI_API_KEY })
+
 export {
     TOKEN,
     IS_DEV,
-    GEMINI_API_KEY,
+    AI,
     SERVER_ID,
     CLIENT_ID
 };
