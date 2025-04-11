@@ -4,7 +4,7 @@ dotenv.config()
 
 const IS_DEV: string | undefined = process.argv[2];
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const SERVER_ID = process.env.SERVER_ID || "840099499086970910";
+const SERVER_ID = process.env.SERVER_ID || "840099499086970910"; // Teyvat's server ID
 
 let CLIENT_ID: string;
 let TOKEN: string | undefined;
