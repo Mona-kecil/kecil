@@ -1,6 +1,7 @@
 import { Message, OmitPartialGroupDMChannel } from "discord.js";
 import { CLIENT_ID } from "./config";
-import helpCommandHandler from "./commands/messageCommands/help";
+import helpCommandHandler from "./commands/messageCommands/helpCommandHandler";
+import roastMeCommandHandler from "./commands/messageCommands/roastMeCommandHandler";
 
 const PREFIX = `<@${CLIENT_ID}>`;
 
@@ -18,6 +19,19 @@ export default async function messageHandlers(message: OmitPartialGroupDMChannel
         return;
     }
     
+    if (command.toLowerCase() === "roastme") {
+        roastMeCommandHandler(message, message.author);
+        return;
+    }
+
+    if (command.toLocaleLowerCase() === "index-server" && message.author.username === "monakecil") {
+        try {
+            message.reply("NOT IMPLEMENTED YET.");
+        } catch (err) {
+            console.error(`[ERROR] Failed to send message to user ${message.author.tag}: ${err}`);
+        }
+        return;
+    }
 }
 
 function DEBUG_echo(message: OmitPartialGroupDMChannel<Message<boolean>>, prefix: string, command: string, contents: string[]) {
