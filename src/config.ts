@@ -7,7 +7,7 @@ const SERVER_ID = process.env.SERVER_ID || "840099499086970910";
 
 let CLIENT_ID: string;
 let TOKEN: string | undefined;
-if (IS_DEV.toUpperCase() === "DEV") {
+if (IS_DEV && IS_DEV.toUpperCase() === "DEV") {
     TOKEN = process.env.DISCORD_DEV_TOKEN;
     CLIENT_ID = "918108633684922398"; // Xiao Mao
 } else {
