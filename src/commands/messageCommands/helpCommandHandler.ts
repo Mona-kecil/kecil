@@ -1,6 +1,8 @@
 import { Message } from "discord.js";
 
-export default function helpCommandHandler(message: Message<boolean>, author: string) {
+export default async function helpCommandHandler(message: Message<boolean>) {
+    
+    const author = message.author.username;
     try {
         if (author === "monakecil") {
             message.reply({

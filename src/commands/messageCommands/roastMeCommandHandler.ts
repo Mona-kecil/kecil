@@ -1,9 +1,11 @@
-import { Message, User } from "discord.js";
+import { Message } from "discord.js";
 import { getUserMessagesHistory } from "../../dbClient";
 import { AI } from "../../config";
+import reply from "../../utils/reply";
 
-export default async function roastMeCommandHandler(message: Message<boolean>, author: User, model: string = "gemini-2.0-flash") {
-    const authorId = author.id;
+export default async function roastMeCommandHandler(message: Message<boolean>, model: string = "gemini-2.0-flash") {
+    const author = message.author;
+    const authorId = message.author.id;
     const history = await getUserMessagesHistory(authorId, 100);
     
     if (!history || history.length === 0) {
@@ -48,7 +50,7 @@ export default async function roastMeCommandHandler(message: Message<boolean>, a
     Jika sebuah pesan adalah "pengen sih main tapi agak males euy" dan konteks sebelumnya tidak jelas atau hilang, Anda bisa menambahkan:
     [Konteks]: Menanggapi ajakan bermain sebelumnya.
     pengen sih main tapi agak males euy
-    
+
     Ingat:
     - Tambahkan konteks hanya jika benar-benar diperlukan untuk meningkatkan pemahaman.
     - Asumsikan obrolan ini terjadi antar teman di Discord.
@@ -58,12 +60,7 @@ export default async function roastMeCommandHandler(message: Message<boolean>, a
 
     console.log(`[Roast Me] Getting history context from user ${author.tag}...`)
 
-    try {
-        message.reply("Tunggu bentar, ya.")
-    } catch (error) {
-        console.error(`[ERROR] Failed to send message to user ${author.tag}: ${error}`);
-        return;
-    }
+    reply(message, "Tunggu bentar, ya.", {repliedUser: true});
 
     const contextAnalysis = await AI.models.generateContent({
         model,
@@ -71,14 +68,9 @@ export default async function roastMeCommandHandler(message: Message<boolean>, a
     });
 
     if (!contextAnalysis.text) {
-        try {
-            console.warn(`[WARN] Failed to generate context for roast`);
-            message.reply(`Hi, <@${authorId}>.\nSorry, I couldn't analyze your chat history. Try again later!`);
-            return;
-        } catch (error) {
-            console.error(`[ERROR] Failed to send message to user ${author.tag}: ${error}`);
-            return;
-        }
+        console.warn(`[WARN] Failed to generate context for roast`);
+        reply(message, `Hi, <@${authorId}>.\nSorry, I couldn't analyze your chat history. Try again later!`, {repliedUser: true});
+        return;
     }
 
     const roastPrompt = `Anda adalah AI yang ahli dalam membuat roasting (sindiran tajam) yang cerdas, lucu, dan mengalir secara alami, berdasarkan HANYA pada riwayat obrolan yang diberikan.
@@ -103,9 +95,10 @@ export default async function roastMeCommandHandler(message: Message<boolean>, a
     - Rangkai beberapa poin observasi/sindiran secara mulus dengan transisi yang baik dalam satu paragraf tersebut.
     - Jangan terlalu panjang, cukup beberapa kalimat yang padat dan mengena.
     - Jangan tambahkan tanda kutip (") pada awal dan akhir kalimat output.
+    - Jangan kutip history user ("), biarkan mengalir natural saja.
 
     Contoh Output yang Diinginkan (hanya sebagai referensi GAYA, FORMAT, dan ALUR, JANGAN tiru isi spesifiknya atau nama-nama di dalamnya jika tidak ada di history):
-    Antara jadi budak bot Discord atau jadi budak cinta karakter 2D, kayaknya kamu bingung milihnya, ya? Dari mulai memperkenalkan diri dengan polosnya Adin, sampai ngutuk "bacot anjing," kamu ini paket komplit antara lugu dan edgelord, tapi kayaknya lebih banyak edgelord-nya deh, apalagi abis cerai sama seabrek karakter, jangan-jangan kamu nikah sama mereka biar bisa nyakitin mereka ya? Jangan lupa, kalo aim masih "okei 😔💔", mending jangan nyampah tag ###icikiwir deh, kasian yang liat!
+    Antara jadi budak bot Discord atau jadi budak cinta karakter 2D, kayaknya kamu bingung milihnya, ya? Dari mulai memperkenalkan diri dengan polosnya Adin, sampai ngutuk bacot anjing, kamu ini paket komplit antara lugu dan edgelord, tapi kayaknya lebih banyak edgelord-nya deh, apalagi abis cerai sama seabrek karakter, jangan-jangan kamu nikah sama mereka biar bisa nyakitin mereka ya? Jangan lupa, kalo aim masih okei 😔💔, mending jangan nyampah tag ###icikiwir deh, kasian yang liat!
 
     Sekarang, buatkan roasting untuk "${author.username}" berdasarkan HANYA riwayat obrolan yang diberikan, pastikan terasa alami, tidak mengarang detail, dan tidak diawali/diakhiri dengan tanda kutip.`;
 
@@ -113,29 +106,19 @@ export default async function roastMeCommandHandler(message: Message<boolean>, a
 
     const roast = await AI.models.generateContent({
         model,
-        contents: roastPrompt
+        contents: roastPrompt,
+        config: {
+            temperature: 2.0,
+            maxOutputTokens: 2048
+        }
     });
 
     if (!roast.text) {
-        try {
-            console.warn(`[WARN] Failed to generate roast for ${author.tag}`)
-            message.reply(`Hi, <@${authorId}>.\nSorry, I couldn't come up with a roast right now. Try again later!`)
-            return;
-        } catch (error) {
-            console.error(`[ERROR] Failed to send message to user ${author.tag}: ${error}`)
-            return;
-        }
+        console.warn(`[WARN] Failed to generate roast for ${author.tag}`)
+        reply(message, `Hi, <@${authorId}>.\nSorry, I couldn't come up with a roast right now. Try again later!`, {repliedUser: true});
+        return;
     }
 
-    try {
-        message.reply({
-            content: roast.text,
-            allowedMentions: {repliedUser: true}
-        })
-        return;
-    } catch (error) {
-        console.error(`[ERROR] Failed to send message to user ${author.tag}: ${error}`)
-        return;
-    }
+    reply(message, roast.text, {repliedUser: true});
 
 }

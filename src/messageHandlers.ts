@@ -3,6 +3,7 @@ import { CLIENT_ID, SERVER_ID } from "./config";
 import helpCommandHandler from "./commands/messageCommands/helpCommandHandler";
 import roastMeCommandHandler from "./commands/messageCommands/roastMeCommandHandler";
 import reply from "./utils/reply";
+import chatCommandHandler from "./commands/messageCommands/chatCommandHandler";
 
 const PREFIX = `<@${CLIENT_ID}>`;
 
@@ -15,10 +16,10 @@ export default async function messageHandlers(message: OmitPartialGroupDMChannel
 
     switch (command.toLowerCase()) {
         case "help":
-            helpCommandHandler(message, message.author.username);
+            helpCommandHandler(message);
             return;
         case "roastme":
-            roastMeCommandHandler(message, message.author);
+            roastMeCommandHandler(message);
             return;
         case "index-server":
             if (message.author.username === "monakecil") {
@@ -28,7 +29,11 @@ export default async function messageHandlers(message: OmitPartialGroupDMChannel
             reply(message, "monakecil is the only master I serve.", {repliedUser: false});
             return;
         case "chat":
-            reply(message, "NOT IMPLEMENTED YET.", {repliedUser: false});
+            if (!contents.length) {
+                reply(message, `Hi, <@${message.author.id}>.\nHere's how to use me\n<@${CLIENT_ID}> chat <topic>`, {repliedUser: true})
+                return;
+            }
+            chatCommandHandler(message, contents.join(' '));
             return;
         case "memory":
             reply(message, "NOT IMPLEMENTED YET.", {repliedUser: false});
