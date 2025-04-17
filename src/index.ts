@@ -3,23 +3,21 @@ import {
     Events,
     GatewayIntentBits,
     Message,
-    PermissionsBitField,
     TextChannel
 } from "discord.js";
 import Meng from "./types/Meng";
 import {
-    getSimilarMessages,
-    getUserMessagesHistory,
     storeAndProcessBatch
 } from "./dbClient";
 
 import {
     TOKEN,
     IS_DEV,
-    AI,
     SERVER_ID,
-    CLIENT_ID
 } from "./config";
+
+import reply from "./utils/reply";
+
 import messageHandlers from "./messageHandlers";
 
 const client = new Meng({
@@ -77,7 +75,14 @@ async function fetchAndStoreChannelHistory(channel: TextChannel, batchSize: numb
 }
 
 client.on(Events.MessageCreate, async (message) => {
-    messageHandlers(message, IS_DEV);
+    if (message.author.bot) return;
+
+    if (!IS_DEV && message.guild?.id !== SERVER_ID) {
+        reply(message, "I can only be used inside Teyvat.", {repliedUser: false});
+        return;
+    }
+
+    messageHandlers(message);
 })
 
 // client.on("messageCreate", async (message) => {

@@ -28,7 +28,8 @@ export default function helpCommandHandler(message: Message<boolean>, author: st
 
 const publicUser = [
     "**help**: Show this message",
-    "**roastme**: Get roasted based on your recent chat history"
+    "**roastme**: Get roasted based on your recent chat history",
+    "**chat**: Chat with Meng about any common topics"
 ];
 
 const authorizedUser = [

@@ -6,38 +6,40 @@ import reply from "./utils/reply";
 
 const PREFIX = `<@${CLIENT_ID}>`;
 
-export default async function messageHandlers(message: OmitPartialGroupDMChannel<Message<boolean>>, isDev: string | undefined) {
-    if (message.author.bot && message.author.id != CLIENT_ID) return;
-
-    if (!isDev && message.guild?.id !== SERVER_ID) {
-        reply(message, "I can only be used inside Teyvat.", {repliedUser: false});
-        return;
-    }
+export default async function messageHandlers(message: OmitPartialGroupDMChannel<Message<boolean>>) {
 
     const query = message.content.split(" ");
     const [prefix, command, ...contents] = query;
     
     if (prefix !== PREFIX) return;
 
-    // DEBUG_echo(message, prefix, command, contents);
-    if (command.toLowerCase() === "help") {
-        helpCommandHandler(message, message.author.username);
-        return;
-    }
-    
-    if (command.toLowerCase() === "roastme") {
-        roastMeCommandHandler(message, message.author);
-        return;
+    switch (command.toLowerCase()) {
+        case "help":
+            helpCommandHandler(message, message.author.username);
+            return;
+        case "roastme":
+            roastMeCommandHandler(message, message.author);
+            return;
+        case "index-server":
+            if (message.author.username === "monakecil") {
+                reply(message, "NOT IMPLEMENTED YET.", {repliedUser: false});
+                return;
+            }
+            reply(message, "monakecil is the only master I serve.", {repliedUser: false});
+            return;
+        case "chat":
+            reply(message, "NOT IMPLEMENTED YET.", {repliedUser: false});
+            return;
+        case "memory":
+            reply(message, "NOT IMPLEMENTED YET.", {repliedUser: false});
+            return;
+        default:
+            break;
     }
 
-    if (command.toLocaleLowerCase() === "index-server" && message.author.username === "monakecil") {
-        try {
-            message.reply("NOT IMPLEMENTED YET.");
-        } catch (err) {
-            console.error(`[ERROR] Failed to send message to user ${message.author.tag}: ${err}`);
-        }
-        return;
-    }
+    reply(message, "Invalid command.", {repliedUser: false});
+    return;
+
 }
 
 function DEBUG_echo(message: OmitPartialGroupDMChannel<Message<boolean>>, prefix: string, command: string, contents: string[]) {
