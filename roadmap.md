@@ -2,7 +2,7 @@
 
 ## Chat Features
 - [ ] Implement image parsing
-- [ ] Implement chat command
+- [x] Implement chat command
   - [ ] Structure: `@bot chat <query>`
   - [ ] Auto create a thread for the chat
     - [ ] Only respond chat from the user who triggered the command

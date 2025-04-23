@@ -4,6 +4,7 @@ import helpCommandHandler from "./commands/messageCommands/helpCommandHandler";
 import roastMeCommandHandler from "./commands/messageCommands/roastMeCommandHandler";
 import reply from "./utils/reply";
 import chatCommandHandler from "./commands/messageCommands/chatCommandHandler";
+import { getThread } from "./dbClient";
 
 const PREFIX = `<@${CLIENT_ID}>`;
 
@@ -11,6 +12,24 @@ export default async function messageHandlers(message: OmitPartialGroupDMChannel
 
     const query = message.content.split(" ");
     const [prefix, command, ...contents] = query;
+
+    if (message.channel.isThread()) {
+        const metadata = await getThread(message.channelId);
+        if (!metadata) {
+            console.log(`[messageHandlers] Thread ${message.channelId} not found`)
+            return;
+        }
+
+        console.log(`[messageHandlers] Thread ${message.channelId} found`);
+        console.log(metadata);
+        console.log(metadata.author_id, metadata.channel_id, metadata.thread_id);
+        if (message.author.id !== metadata.author_id) return;
+        console.log(`[messageHandlers] User ${message.author.id} is the owner of thread ${message.channelId}`)
+
+        console.log(`[messageHandlers] Thread ${message.channelId} is active`)
+        chatCommandHandler(message, contents.join(' '));
+        return;
+    }
     
     if (prefix !== PREFIX) return;
 

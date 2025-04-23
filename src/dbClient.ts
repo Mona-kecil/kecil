@@ -1,9 +1,10 @@
 import { Pool } from "pg";
 import * as dotenv from "dotenv";
 import { Data } from "./types/Data";
-import { Message } from "discord.js";
+import { Message, PublicThreadChannel } from "discord.js";
 import { textsToEmbedding } from "./api/textToEmbedding";
 import formatEmbedding from "./utils/formatEmbedding";
+import ThreadMetadata from "./types/ThreadMetadata";
 dotenv.config();
 
 const pgHost = process.env.POSTGRES_HOST
@@ -24,11 +25,11 @@ const pool = new Pool({
     port: Number(pgPort)
 })
 
-export async function getSimilarMessages(query: string, userId: string): Promise<Data[] | void> {
+export async function getSimilarMessages(query: string, userId: string): Promise<Data[] | null> {
     const embedding = await textsToEmbedding([query])
     if (!embedding) {
         console.error("Failed to get embeddings from API. Skipping batch")
-        return
+        return null;
     }
 
     const client = await pool.connect()
@@ -51,13 +52,13 @@ export async function getSimilarMessages(query: string, userId: string): Promise
         })
     } catch (error) {
         console.error('Error getting similar messages:', error)
-        return
+        return null;
     } finally {
         client.release()
     }
 }
 
-export async function getUserMessagesHistory(userId: string, limit: number = 100): Promise<Data[] | void> {
+export async function getUserMessagesHistory(userId: string, limit: number = 100): Promise<Data[] | null> {
     const client = await pool.connect()
     try {
         const result = await client.query(
@@ -67,36 +68,69 @@ export async function getUserMessagesHistory(userId: string, limit: number = 100
             ORDER BY content, timestamp DESC
             LIMIT $2`,
             [userId, limit]
-        )
-        return result.rows
+        );
+        return result.rows;
     } catch (error) {
-        console.error('Error getting user messages history:', error)
-        return
+        console.error('Error getting user messages history:', error);
+        return null;
     } finally {
-        client.release()
+        client.release();
     }
 }
 
-export async function storeAndProcessBatch(messagesBatch: Message[]): Promise<number | void> {
+export async function getThread(threadId: string): Promise<ThreadMetadata | null> {
+    const client = await pool.connect();
+    try {
+        const result = await client.query<ThreadMetadata>(
+            `SELECT * FROM managed_threads WHERE thread_id = $1`,
+            [threadId]
+        );
+        if (result.rows.length > 0) return result.rows[0];
+        return null;
+    } catch (error) {
+        console.error('Error checking thread:', error);
+        return null;
+    } finally {
+        client.release();
+    }
+}
+
+export async function storeThread(threadId: string, authorId: string): Promise<any[] | null> {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `INSERT INTO managed_threads (thread_id, author_id) VALUES ($1, $2)`,
+            [threadId, authorId]
+        );
+        return result.rows;
+    } catch (error) {
+        console.error('Error storing thread:', error);
+        return null;
+    } finally {
+        client.release();
+    }
+}
+
+export async function storeAndProcessBatch(messagesBatch: Message[]): Promise<number | null> {
     const valid = await validateBatch(messagesBatch)
     if (!valid) {
-        console.error("Invalid batch. Skipping batch")
-        return
+        console.error("Invalid batch. Skipping batch");
+        return null;
     }
 
     const processed = await processBatch(messagesBatch)
     if (!processed) {
-        console.error("Failed to process batch. Skipping batch")
-        return
+        console.error("Failed to process batch. Skipping batch");
+        return null;
     }
 
     const stored = await storeBatch(processed)
     if (!stored) {
-        console.error("Failed to store batch. Skipping batch")
-        return
+        console.error("Failed to store batch. Skipping batch");
+        return null;
     }
 
-    return stored
+    return stored;
 }
 
 async function validateBatch(messagesBatch: Message[]): Promise<boolean> {
@@ -107,18 +141,18 @@ async function validateBatch(messagesBatch: Message[]): Promise<boolean> {
     return Promise.resolve(true)
 }
 
-async function processBatch(messagesBatch: Message[]): Promise<Data[] | void> {
+async function processBatch(messagesBatch: Message[]): Promise<Data[] | null> {
     console.log(`Processing ${messagesBatch.length} messages in batch...`)
     const texts = messagesBatch.map((message) => message.content || "")
     const embeddings = await textsToEmbedding(texts)
     if (!embeddings) {
-        console.error("Failed to get embeddings from API. Skipping batch")
-        return
+        console.error("Failed to get embeddings from API. Skipping batch");
+        return null;
     }
 
     if (embeddings.length !== messagesBatch.length) {
-        console.error(`Expected ${messagesBatch.length} embeddings, got ${embeddings.length}. Skipping batch`)
-        return
+        console.error(`Expected ${messagesBatch.length} embeddings, got ${embeddings.length}. Skipping batch`);
+        return null;
     }
 
     const batch: Data[] = messagesBatch.map((msg, index) => {
@@ -132,14 +166,14 @@ async function processBatch(messagesBatch: Message[]): Promise<Data[] | void> {
             attachment_urls: Array.from(msg.attachments.values()).map((attachment) => attachment.url),
             embedding: embeddings[index],
         }
-    }).filter(row => row !== null)
-    console.log(`Batch processed. Batch size: ${batch.length}`)
+    }).filter(row => row !== null);
+    console.log(`Batch processed. Batch size: ${batch.length}`);
 
-    return batch
+    return batch;
 }
 
 async function storeBatch(batch: Data[]): Promise<number | null> {
-    console.log(`Attempting to insert ${batch.length} rows into the database...`)
+    console.log(`Attempting to insert ${batch.length} rows into the database...`);
 
     let client;
     const query = `
@@ -150,7 +184,7 @@ async function storeBatch(batch: Data[]): Promise<number | null> {
 
     const result = {
         rowCount: 0,
-    }
+    };
 
     try {
         client = await pool.connect()
@@ -203,7 +237,7 @@ async function storeBatch(batch: Data[]): Promise<number | null> {
     }
 }
 
-//export async function OLD_storeAndProcessBatch(messagesBatch: Omit<Data, "embedding">[]): Promise<number | void> {
+//export async function OLD_storeAndProcessBatch(messagesBatch: Omit<Data, "embedding">[]): Promise<number | null> {
 //    if (!messagesBatch || messagesBatch.length === 0) {
 //        throw new Error("No messages provided for storage and processing.")
 //    }
