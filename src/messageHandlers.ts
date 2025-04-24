@@ -15,18 +15,10 @@ export default async function messageHandlers(message: OmitPartialGroupDMChannel
 
     if (message.channel.isThread()) {
         const metadata = await getThread(message.channelId);
-        if (!metadata) {
-            console.log(`[messageHandlers] Thread ${message.channelId} not found`)
-            return;
-        }
-
-        console.log(`[messageHandlers] Thread ${message.channelId} found`);
-        console.log(metadata);
-        console.log(metadata.author_id, metadata.channel_id, metadata.thread_id);
+        
+        if (!metadata) return;
         if (message.author.id !== metadata.author_id) return;
-        console.log(`[messageHandlers] User ${message.author.id} is the owner of thread ${message.channelId}`)
 
-        console.log(`[messageHandlers] Thread ${message.channelId} is active`)
         chatCommandHandler(message, contents.join(' '));
         return;
     }
