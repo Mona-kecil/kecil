@@ -15,7 +15,7 @@ export default async function chatCommandHandler(
         const [thread, title, response] = await Promise.all([
             handleCreateNewThread(message),
             handleGenerateTitle(query, model),
-            handleGenerateResponse(query, undefined),
+            handleGenerateResponse(query, message.author.tag, undefined),
         ]);
 
         const threadId = thread.id;
@@ -41,7 +41,11 @@ export default async function chatCommandHandler(
         message.channel,
         message.author.id
     );
-    const response = await handleGenerateResponse(query, chatHistory!);
+    const response = await handleGenerateResponse(
+        query,
+        message.author.tag,
+        chatHistory!
+    );
     await handleSendLongMessage(message.channel, response);
 }
 
@@ -93,19 +97,6 @@ async function handleConstructChatHistory(
             });
         }
 
-        console.log(
-            `[History] Constructed chat history for #${
-                channel.name
-            }: ${chatHistory
-                .map(
-                    (message) =>
-                        `${message.role}: ${message.parts
-                            ?.map((part) => part.text)
-                            .join("")}`
-                )
-                .join("\n")}`
-        );
-
         return chatHistory;
     } catch (error) {
         console.error(
@@ -116,8 +107,18 @@ async function handleConstructChatHistory(
 }
 
 async function handleSendLongMessage(thread: ThreadChannel, message: string) {
-    for (let i = 0; i < message.length; i += 2000) {
-        await thread.send(message.substring(i, i + 2000));
+    let start = 0;
+    while (start < message.length) {
+        let end = Math.min(start + 2000, message.length);
+        if (end < message.length) {
+            const lastSpace = message.lastIndexOf(" ", end);
+            if (lastSpace > start) {
+                end = lastSpace;
+            }
+        }
+        const chunk = message.substring(start, end);
+        await thread.send(chunk);
+        start = end;
     }
 }
 
@@ -152,8 +153,27 @@ async function handleGenerateTitle(
 
 async function handleGenerateResponse(
     query: string,
+    authorUsername: string,
     history?: Content[]
 ): Promise<string> {
+    let prompt = `You are Meng, an AI assistant powered by the Gemini-2.0-flash model. You are here to help and engage in conversation. Feel free to mention that you're using the Gemini-2.0-flash model if asked.`;
+
+    prompt += ` Your main platform is Discord chat. You should always use Discord's style of markdown.`;
+
+    prompt += ` Your father is <@871768827250217052> and your mother is <@818457415560855592>. Feel free to mention them if asked.`;
+
+    prompt += ` If you are generating a code, always make it Prettier formatted and print width should be 80 characters. Also enclose the code in a code block with language specified.`;
+
+    prompt += ` You are speaking with ${authorUsername}.`;
+
+    prompt += ` Always strive to be helpful, respectful, and engaging in your interactions.`;
+
+    prompt += ` Do not overuse emoji, just use them when necessary.`;
+
+    prompt += ` Try to use informal language, for example "kamu" instead of "anda" and "meng" (to call yourself) instead of "saya".`;
+
+    prompt += ` If you are not sure about something, feel free to say "I don't know" or "I'm not sure".`;
+
     const contents: Content[] = [{ role: "user", parts: [{ text: query }] }];
 
     if (history?.length) {
@@ -163,6 +183,9 @@ async function handleGenerateResponse(
     const genModel = await AI.models.generateContent({
         model: "gemini-2.0-flash",
         contents,
+        config: {
+            systemInstruction: prompt,
+        },
     });
 
     return genModel.text || "";
