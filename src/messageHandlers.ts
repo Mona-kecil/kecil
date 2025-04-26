@@ -1,5 +1,5 @@
 import { Message, OmitPartialGroupDMChannel } from "discord.js";
-import { CLIENT_ID, SERVER_ID } from "./config";
+import { CLIENT_ID } from "./config";
 import helpCommandHandler from "./commands/messageCommands/helpCommandHandler";
 import roastMeCommandHandler from "./commands/messageCommands/roastMeCommandHandler";
 import reply from "./utils/reply";
@@ -15,7 +15,6 @@ export default async function messageHandlers(message: OmitPartialGroupDMChannel
 
     if (message.channel.isThread()) {
         const metadata = await getThread(message.channelId);
-        
         if (!metadata) return;
         if (message.author.id !== metadata.author_id) return;
 

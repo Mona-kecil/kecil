@@ -19,7 +19,7 @@ if (!pgHost || !pgPort || !pgUser || !pgPassword || !pgDatabase) {
 
 const pool = new Pool({
     user: pgUser,
-    host: pgHost,
+    host: pgHost, 
     database: pgDatabase,
     password: pgPassword,
     port: Number(pgPort)
