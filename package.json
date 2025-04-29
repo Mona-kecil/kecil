@@ -6,7 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx nodemon -w 'src/**/*' -e 'ts' -x 'npx tsc && node dist/index.js DEV'",
-    "prod": "npx tsc && node ."
+    "prod": "npx tsc && node .",
+    "reg": "npx tsc && node dist/commands/slashCommands/deploySlashCommandHandler.js reg",
+    "del": "npx tsc && node dist/commands/slashCommands/deploySlashCommandHandler.js del",
+    "help": "npx tsc && node dist/commands/slashCommands/deploySlashCommandHandler.js help"
   },
   "keywords": [
     "discord bot",
@@ -19,15 +22,15 @@
   "packageManager": "pnpm@10.7.0",
   "dependencies": {
     "@google/genai": "^0.7.0",
-    "axios": "^1.8.4",
-    "discord.js": "^14.18.0",
-    "dotenv": "^16.4.7",
-    "pg": "^8.14.1"
+    "axios": "^1.9.0",
+    "discord.js": "^14.19.1",
+    "dotenv": "^16.5.0",
+    "pg": "^8.15.6"
   },
   "devDependencies": {
-    "@types/node": "^22.13.14",
-    "@types/pg": "^8.11.11",
-    "nodemon": "^3.1.9",
-    "typescript": "^5.8.2"
+    "@types/node": "^22.15.3",
+    "@types/pg": "^8.11.14",
+    "nodemon": "^3.1.10",
+    "typescript": "^5.8.3"
   }
 }

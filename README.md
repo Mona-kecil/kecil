@@ -3,11 +3,12 @@
 Personalized discord bot for Teyvat.
 
 ## Features
-- roastme
 
+-   roastme
+-   chat
 
 ## Upcoming features
-- chat
-- image parsing and generation
-- document parsing
-- 'memory' feature from chatgpt
+
+-   image parsing and generation
+-   document parsing
+-   'memory' feature from chatgpt

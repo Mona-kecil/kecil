@@ -1,89 +1,145 @@
-import {
-    Collection,
-    Events,
-    GatewayIntentBits,
-    Message,
-    TextChannel
-} from "discord.js";
+import { Events, GatewayIntentBits } from "discord.js";
 import Meng from "./types/Meng";
-import {
-    storeAndProcessBatch
-} from "./dbClient";
 
-import {
-    TOKEN,
-    IS_DEV,
-    SERVER_ID,
-} from "./config";
-
-import reply from "./utils/reply";
+import { TOKEN, IS_DEV, SERVER_ID } from "./config";
 
 import messageHandlers from "./messageHandlers";
+import reply from "./utils/reply";
 
-const client = new Meng({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
-});
+import { loadedCommands } from "./commands/slashCommands/slashCommandHandler";
+import Command from "./types/Command";
 
-async function fetchAndStoreChannelHistory(channel: TextChannel, batchSize: number = 100): Promise<{ totalAttempted: number, totalProcessed: number }> {
-    console.log(`Starting to fetch messages from #${channel.name}...`)
-    let lastId: string | undefined = undefined
-    let totalProcessed = 0
-    let totalAttempted = 0
-    let batchMessages: Message[] = []
-    let fetchLimit = 100
+async function main() {
+    console.log(`[Client] Initializing Meng...`);
 
-    try {
-        while (true) {
-            const fetchedMessages: Collection<string, Message<boolean>> = await channel.messages.fetch({
-                limit: fetchLimit,
-                before: lastId,
-            })
+    const client = new Meng({
+        intents: [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.MessageContent,
+        ],
+    });
 
-            if (fetchedMessages.size === 0) break
+    console.log(`[Client] Meng initialized`);
+    console.log(`[Client] Loading slash commands...`);
 
-            const messagesArray = Array.from(fetchedMessages.values()).filter(message => message.author.bot === false).reverse()
-            batchMessages.push(...messagesArray as Message[])
-            lastId = fetchedMessages.last()?.id
-
-            while (batchMessages.length >= batchSize) {
-                const currentBatch = batchMessages.splice(0, batchSize)
-                totalAttempted += currentBatch.length
-                const processedCount = await storeAndProcessBatch(currentBatch)
-                totalProcessed += processedCount!
-            }
-
-            console.log(`[History] Fetched ${fetchedMessages.size} from #${channel.name}. Buffer: ${batchMessages.length}. Next 'before': ${lastId}`);
-        }
-
-        if (batchMessages.length > 0) {
-            console.log(`[History] Processing final remaining ${batchMessages.length} messages for #${channel.name}...`)
-            totalAttempted += batchMessages.length
-            const processedCount = await storeAndProcessBatch(batchMessages)
-            totalProcessed += processedCount!
-        }
-
-        console.log(`[History] Finished fetching and processing messages from #${channel.name}. Total attempted: ${totalAttempted}. Total processed: ${totalProcessed}.`)
-        return { totalAttempted, totalProcessed }
-    } catch (error) {
-        console.error(`[History] Error fetching and processing messages from #${channel.name}: ${error}`)
-        return { totalAttempted, totalProcessed }
+    const commandCollection = await loadedCommands;
+    if (!commandCollection) {
+        console.error(
+            `[Client] failed to load slash commands. Slash commands will not be updated.`
+        );
+    } else {
+        client.commands = commandCollection;
+        console.log(`[Client] Found ${client.commands.size} slash commands.`);
     }
+
+    client.on(Events.InteractionCreate, async (interaction) => {
+        if (!interaction.isChatInputCommand()) return;
+        const command: Command = client.commands.get(interaction.commandName);
+        if (!command) return;
+
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(
+                `[Client] Failed to execute command ${interaction.commandName}: ${error}`
+            );
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({
+                    content: "There was an error while executing this command!",
+                    ephemeral: true,
+                });
+            } else {
+                await interaction.reply({
+                    content: "There was an error while executing this command!",
+                    ephemeral: true,
+                });
+            }
+        }
+    });
+
+    client.on(Events.MessageCreate, async (message) => {
+        if (message.author.bot) return;
+
+        if (!IS_DEV && message.guild?.id !== SERVER_ID) {
+            reply(message, "I can only be used inside Teyvat.", {
+                repliedUser: false,
+            });
+            return;
+        }
+
+        messageHandlers(message);
+    });
+
+    client.once(Events.ClientReady, (readyClient) => {
+        console.log(`[Client] Logged in as ${readyClient.user.tag}`);
+    });
+
+    client.login(TOKEN);
 }
 
-client.on(Events.MessageCreate, async (message) => {
-    if (message.author.bot) return;
+// Old code that hasn't been refactored yet
+// async function fetchAndStoreChannelHistory(
+//     channel: TextChannel,
+//     batchSize: number = 100
+// ): Promise<{ totalAttempted: number; totalProcessed: number }> {
+//     console.log(`Starting to fetch messages from #${channel.name}...`);
+//     let lastId: string | undefined = undefined;
+//     let totalProcessed = 0;
+//     let totalAttempted = 0;
+//     let batchMessages: Message[] = [];
+//     let fetchLimit = 100;
 
-    if (!IS_DEV && message.guild?.id !== SERVER_ID) {
-        reply(message, "I can only be used inside Teyvat.", {repliedUser: false});
-        return;
-    }
+//     try {
+//         while (true) {
+//             const fetchedMessages: Collection<
+//                 string,
+//                 Message<boolean>
+//             > = await channel.messages.fetch({
+//                 limit: fetchLimit,
+//                 before: lastId,
+//             });
 
-    messageHandlers(message);
-})
+//             if (fetchedMessages.size === 0) break;
+
+//             const messagesArray = Array.from(fetchedMessages.values())
+//                 .filter((message) => message.author.bot === false)
+//                 .reverse();
+//             batchMessages.push(...(messagesArray as Message[]));
+//             lastId = fetchedMessages.last()?.id;
+
+//             while (batchMessages.length >= batchSize) {
+//                 const currentBatch = batchMessages.splice(0, batchSize);
+//                 totalAttempted += currentBatch.length;
+//                 const processedCount = await storeAndProcessBatch(currentBatch);
+//                 totalProcessed += processedCount!;
+//             }
+
+//             console.log(
+//                 `[History] Fetched ${fetchedMessages.size} from #${channel.name}. Buffer: ${batchMessages.length}. Next 'before': ${lastId}`
+//             );
+//         }
+
+//         if (batchMessages.length > 0) {
+//             console.log(
+//                 `[History] Processing final remaining ${batchMessages.length} messages for #${channel.name}...`
+//             );
+//             totalAttempted += batchMessages.length;
+//             const processedCount = await storeAndProcessBatch(batchMessages);
+//             totalProcessed += processedCount!;
+//         }
+
+//         console.log(
+//             `[History] Finished fetching and processing messages from #${channel.name}. Total attempted: ${totalAttempted}. Total processed: ${totalProcessed}.`
+//         );
+//         return { totalAttempted, totalProcessed };
+//     } catch (error) {
+//         console.error(
+//             `[History] Error fetching and processing messages from #${channel.name}: ${error}`
+//         );
+//         return { totalAttempted, totalProcessed };
+//     }
+// }
 
 // client.on("messageCreate", async (message) => {
 
@@ -190,7 +246,7 @@ client.on(Events.MessageCreate, async (message) => {
 //             console.log("[Context] Got context")
 
 //             console.log("[Roast] Generating roast based on analysis...")
-            
+
 //             const roastPrompt = `
 //                 **Tugas Utama:** Buat sebuah roast/ejekan singkat (1-2 kalimat) yang lucu dan witty dalam Bahasa Indonesia untuk pengguna Discord berdasarkan analisis history chat mereka.
 
@@ -255,7 +311,7 @@ client.on(Events.MessageCreate, async (message) => {
 //         try {
 
 //             const getHistoryContextPrompt = `Aku akan memberikanmu chat history dari seorang pengguna Discord. Tugasmu adalah menambahkan konteks agar chatnya menjadi lebih jelas. Misal: "chat: pengen sih main tapi agak males euy" di bubble chat ini jika historynya ga nyambung kamu bisa tambahin context misal "user mengajak main temannya." Ingat untuk hanya tambahkan konteks ke chat yang dirasa perlu. Berikan konteks dalam bahasa Indonesia. Jangan ubah chatnya, hanya append context di bagian atas chatnya. Ingat ini history chat discord, jadi ada kemungkinan besar user sedang chat dengan teman. Chat historynya:\n\n${formattedHistory}`;
-            
+
 //             message.reply({
 //                 content: "Tunggu bentar, ya.",
 //                 allowedMentions: { repliedUser: false }
@@ -266,12 +322,9 @@ client.on(Events.MessageCreate, async (message) => {
 //                 model: "gemini-2.0-flash",
 //                 contents: getHistoryContextPrompt,
 //             });
-            
+
 //             console.log("[Roast] Got history context, generating roast...")
 //             const roastPrompt = `Tolong buat roast/ejekan singkat dalam bahasa Indonesia untuk pengguna Discord ini berdasarkan chat history mereka. Be funny and creative! Unleash your limit. Jangan tambahkan apapun seperti "Oke ini beberapa roast untuk pengguna discord ini", langsung berikan roastnya saja. Jangan gunakan bullet points, bikinkan roastnya menjadi satu kesatuan kalimat. Chat history beserta contextnya:\n\n${context.text}\n\nBuat yang lucu, witty, menarik berdasarkan topik yang mereka bicarakan dan cara mereka ngobrol!`
-
-
-
 
 //             const roastResponse = await ai.models.generateContent({
 //                 model: "gemini-2.0-flash",
@@ -279,7 +332,7 @@ client.on(Events.MessageCreate, async (message) => {
 //             });
 
 //             console.log("[Roast] Generated roast, replying...");
-            
+
 //             if (!roastResponse.text) {
 //                 message.reply({
 //                     content: "Sorry, I couldn't come up with a roast right now. Try again later!",
@@ -299,7 +352,7 @@ client.on(Events.MessageCreate, async (message) => {
 //                 }
 //                 return
 //             }
-            
+
 //             message.reply({
 //                 content: roastResponse.text,
 //                 allowedMentions: { repliedUser: false }
@@ -345,9 +398,9 @@ client.on(Events.MessageCreate, async (message) => {
 //         if (currentChunk) chunks.push(currentChunk)
 
 //         // Send initial message
-//         await message.reply({ 
-//             content: `Chat history (${chunks.length} parts):`, 
-//             allowedMentions: { repliedUser: false } 
+//         await message.reply({
+//             content: `Chat history (${chunks.length} parts):`,
+//             allowedMentions: { repliedUser: false }
 //         })
 
 //         // Send each chunk as a separate message
@@ -396,7 +449,6 @@ client.on(Events.MessageCreate, async (message) => {
 //             message.reply({ content: "monakecil is the only master I serve.", allowedMentions: { repliedUser: false } })
 //             return
 //         }
-
 
 //         if (!message.member?.permissions.has(PermissionsBitField.Flags.Administrator)) {
 //             console.log(`User ${message.author.tag} tried to use !index without Admin permissions.`)
@@ -515,8 +567,7 @@ client.on(Events.MessageCreate, async (message) => {
 //     }
 // })
 
-client.once(Events.ClientReady, readyClient => {
-    console.log(`Ready! Logged in as ${readyClient.user.tag}`)
-})
-
-client.login(TOKEN)
+main().catch((error) => {
+    console.error(`[Client] Unhandled error during startup: ${error}`);
+    process.exit(1);
+});
