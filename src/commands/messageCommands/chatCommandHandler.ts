@@ -2,7 +2,7 @@ import { Collection, Message, ThreadChannel } from "discord.js";
 import { AI, CLIENT_ID } from "../../config";
 import { Content, Part } from "@google/genai";
 import { ThreadAutoArchiveDuration } from "discord.js";
-import { getThread, storeThread } from "../../dbClient";
+import { getThread, getUserPreferences, storeThread } from "../../dbClient";
 
 export default async function chatCommandHandler(
     message: Message<boolean>,
@@ -15,7 +15,7 @@ export default async function chatCommandHandler(
         const [thread, title, response] = await Promise.all([
             handleCreateNewThread(message),
             handleGenerateTitle(query, model),
-            handleGenerateResponse(query, message.author.tag, undefined),
+            handleGenerateResponse(query, message.author.id, message.author.tag, undefined),
         ]);
 
         const threadId = thread.id;
@@ -43,6 +43,7 @@ export default async function chatCommandHandler(
     );
     const response = await handleGenerateResponse(
         query,
+        message.author.id,
         message.author.tag,
         chatHistory!
     );
@@ -127,7 +128,7 @@ async function handleCreateNewThread(
 ): Promise<ThreadChannel> {
     const thread = await message.startThread({
         name: "...",
-        autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays,
+        autoArchiveDuration: ThreadAutoArchiveDuration.OneHour,
     });
     return thread;
 }
@@ -153,9 +154,13 @@ async function handleGenerateTitle(
 
 async function handleGenerateResponse(
     query: string,
+    authorId: string,
     authorUsername: string,
     history?: Content[]
 ): Promise<string> {
+
+    const userPreferences = await getUserPreferences(authorId);
+    
     let prompt = `You are Meng, an AI assistant powered by the Gemini-2.0-flash model. You are here to help and engage in conversation. Feel free to mention that you're using the Gemini-2.0-flash model if asked about what are you.`;
 
     prompt += ` Your main platform is Discord chat. You should always use Discord's style of markdown.`;
@@ -165,6 +170,18 @@ async function handleGenerateResponse(
     prompt += ` If you are generating a code, always make it Prettier formatted and print width should be 80 characters. Also enclose the code in a code block with language specified.`;
 
     prompt += ` You are speaking with ${authorUsername}.`;
+
+    if (userPreferences && userPreferences.occupation) {
+        prompt += ` The user's occupation is ${userPreferences.occupation}.`;
+    }
+
+    if (userPreferences && userPreferences.traits) {
+        prompt += ` The user has requested that you behave in the following ways: ${userPreferences.traits.join(', ')}.`;
+    }
+
+    if (userPreferences && userPreferences.additional_informations) {
+        prompt += ` Additional information about the user: ${userPreferences.additional_informations}. Use these informations to provide more personalized responses.`
+    }
 
     prompt += ` Always strive to be helpful, respectful, and engaging in your interactions.`;
 

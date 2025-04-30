@@ -1,10 +1,12 @@
 import { Pool } from "pg";
 import * as dotenv from "dotenv";
 import { Data } from "./types/Data";
-import { Message, PublicThreadChannel } from "discord.js";
+import { Message } from "discord.js";
 import { textsToEmbedding } from "./api/textToEmbedding";
 import formatEmbedding from "./utils/formatEmbedding";
 import ThreadMetadata from "./types/ThreadMetadata";
+import UserPreferences from "./types/UserPreferences";
+
 dotenv.config();
 
 const pgHost = process.env.POSTGRES_HOST
@@ -234,6 +236,70 @@ async function storeBatch(batch: Data[]): Promise<number | null> {
         }
 
         return null
+    }
+}
+
+export async function setUserOccupationPreference(userId: string, occupation: string): Promise<UserPreferences | null> {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `INSERT INTO user_preferences (user_id, occupation) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET occupation = EXCLUDED.occupation RETURNING user_id, occupation`,
+            [userId, occupation]
+        )
+        return result.rows[0] as UserPreferences;
+    } catch (error) {
+        console.error('Error setting user occupation preference:', error)
+        return null
+    } finally {
+        client.release()
+    }
+}
+
+export async function setUserTraitsPreference(userId: string, traits: string[]): Promise<UserPreferences | null> {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `INSERT INTO user_preferences (user_id, traits) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET traits = EXCLUDED.traits RETURNING user_id, traits`,
+            [userId, traits]
+        )
+        return result.rows[0] as UserPreferences;
+    } catch (error) {
+        console.error('Error setting user traits preference:', error)
+        return null
+    } finally {
+        client.release()
+    }
+}
+
+export async function setUserAdditionalInformationsPreference(userId: string, additional_informations: string): Promise<UserPreferences | null> {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `INSERT INTO user_preferences (user_id, additional_informations) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET additional_informations = EXCLUDED.additional_informations RETURNING user_id, additional_informations`,
+            [userId, additional_informations]
+        )
+        return result.rows[0] as UserPreferences;
+    } catch (error) {
+        console.error('Error setting user additional informations preference:', error)
+        return null
+    } finally {
+        client.release()
+    }
+}
+
+export async function getUserPreferences(userId: string): Promise<UserPreferences | null> {
+    const client = await pool.connect()
+    try {
+        const result = await client.query(
+            `SELECT * FROM user_preferences WHERE user_id = $1`,
+            [userId]
+        )
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error getting user preferences:', error)
+        return null
+    } finally {
+        client.release()
     }
 }
 
