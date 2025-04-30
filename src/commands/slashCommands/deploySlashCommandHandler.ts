@@ -16,7 +16,7 @@ const TOKEN = IS_DEV
     ? process.env.DISCORD_DEV_TOKEN
     : process.env.DISCORD_TOKEN;
 const CLIENT_ID = IS_DEV ? "918108633684922398" : "1356142514519806143";
-const DEV_SERVER_ID = IS_DEV ? "1063070984409727037" : "840099499086970910";
+const SERVER_ID = IS_DEV ? "1063070984409727037" : "840099499086970910";
 
 if (typeof TOKEN === "undefined") {
     throw new Error("Discord token not found");
@@ -48,7 +48,7 @@ async function main() {
             );
     }
 
-    console.log(`Client ID: ${CLIENT_ID}\nServer ID: ${DEV_SERVER_ID}`);
+    console.log(`Client ID: ${CLIENT_ID}\nServer ID: ${SERVER_ID}`);
 }
 
 async function registerSlashCommands(rest: REST) {
@@ -64,7 +64,7 @@ async function registerSlashCommands(rest: REST) {
 
     try {
         await rest.put(
-            Routes.applicationGuildCommands(CLIENT_ID, DEV_SERVER_ID),
+            Routes.applicationGuildCommands(CLIENT_ID, SERVER_ID),
             {
                 body: commandsToDeploy,
             }
@@ -80,7 +80,7 @@ async function registerSlashCommands(rest: REST) {
 async function deleteSlashCommands(rest: REST) {
     try {
         await rest.put(
-            Routes.applicationGuildCommands(CLIENT_ID, DEV_SERVER_ID)
+            Routes.applicationGuildCommands(CLIENT_ID, SERVER_ID)
         );
         console.log(`[Client] Successfully deleted all slash commands`);
     } catch (error) {
