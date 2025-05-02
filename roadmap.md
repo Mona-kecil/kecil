@@ -17,6 +17,6 @@
     -   [x] Allow user to set selected traits
     -   [x] Allow user to set additional informations
 -   [ ] Implement document parsing
-    -   [ ] Convert every document to PDF format
+    -   [ ] Convert documents to PDF format
     -   [ ] Pass the PDF to Meng
     -   [ ] Meng now have context of the document
