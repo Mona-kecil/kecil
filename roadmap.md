@@ -17,6 +17,6 @@
     -   [x] Allow user to set selected traits
     -   [x] Allow user to set additional informations
 -   [ ] Implement document parsing
-    -   [ ] Convert every document to PDF format
+    -   [ ] Convert documents to PDF format
     -   [ ] Set max size of the document to 50MB
     -   [ ] Allow user to upload a document to cloud and link it to the chat
