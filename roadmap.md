@@ -3,6 +3,8 @@
 ## Chat Features
 
 -   [ ] Implement image parsing
+    -   [ ] Convert every image to WebP format
+    -   [ ] Set max size of the image to 20MB
 -   [x] Implement chat command
     -   [x] Structure: `@bot chat <query>`
     -   [x] Auto create a thread for the chat
